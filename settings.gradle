@@ -9,4 +9,7 @@ pluginManagement {
   }
 }
 
-rootProject.name = 'map-templates'
+rootProject.name = 'map-templates-revamped'
+
+include('map-templates')
+include('test-mod')

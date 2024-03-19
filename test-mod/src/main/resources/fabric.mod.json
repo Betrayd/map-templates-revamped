@@ -1,0 +1,10 @@
+{
+    "schemaVersion": 1,
+    "id": "map-templates-test",
+    "version": "${version}",
+    "name": "Map Templates Revamped (test)",
+    "authors": ["Igrium"],
+    "entrypoints": {
+        "main": [ "net.betrayd.map_templates.TestProject" ]
+    }
+}
