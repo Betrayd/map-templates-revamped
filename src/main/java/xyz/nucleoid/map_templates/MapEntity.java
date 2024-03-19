@@ -19,16 +19,16 @@ public record MapEntity(Vec3d position, NbtCompound nbt) {
     public NbtCompound createEntityNbt(BlockPos origin) {
         var nbt = this.nbt.copy();
 
-        var chunkLocalPos = listToPos(this.nbt.getList("Pos", NbtElement.DOUBLE_TYPE));
+        var templateLocalPos = listToPos(this.nbt.getList("Pos", NbtElement.DOUBLE_TYPE));
 
         var worldPosition = this.position.add(origin.getX(), origin.getY(), origin.getZ());
         nbt.put("Pos", posToList(worldPosition));
 
         // AbstractDecorationEntity has special position handling with an attachment position.
         if (nbt.contains("TileX", NbtElement.INT_TYPE)) {
-            nbt.putInt("TileX", MathHelper.floor(nbt.getInt("TileX") + worldPosition.x - chunkLocalPos.x));
-            nbt.putInt("TileY", MathHelper.floor(nbt.getInt("TileY") + worldPosition.y - chunkLocalPos.y));
-            nbt.putInt("TileZ", MathHelper.floor(nbt.getInt("TileZ") + worldPosition.z - chunkLocalPos.z));
+            nbt.putInt("TileX", MathHelper.floor(nbt.getInt("TileX") + worldPosition.x - templateLocalPos.x));
+            nbt.putInt("TileY", MathHelper.floor(nbt.getInt("TileY") + worldPosition.y - templateLocalPos.y));
+            nbt.putInt("TileZ", MathHelper.floor(nbt.getInt("TileZ") + worldPosition.z - templateLocalPos.z));
         }
 
         return nbt;
