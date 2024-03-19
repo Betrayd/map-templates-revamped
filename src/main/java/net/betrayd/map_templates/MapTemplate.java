@@ -1,4 +1,4 @@
-package xyz.nucleoid.map_templates;
+package net.betrayd.map_templates;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;

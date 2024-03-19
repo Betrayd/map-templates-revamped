@@ -1,4 +1,4 @@
-package xyz.nucleoid.map_templates;
+package net.betrayd.map_templates;
 
 import java.util.AbstractMap;
 import java.util.Map;

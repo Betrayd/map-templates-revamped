@@ -1,4 +1,4 @@
-package xyz.nucleoid.map_templates;
+package net.betrayd.map_templates;
 
 import net.minecraft.nbt.NbtCompound;
 import org.jetbrains.annotations.Nullable;

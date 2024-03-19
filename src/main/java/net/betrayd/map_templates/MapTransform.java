@@ -1,4 +1,4 @@
-package xyz.nucleoid.map_templates;
+package net.betrayd.map_templates;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.structure.StructureTemplate;

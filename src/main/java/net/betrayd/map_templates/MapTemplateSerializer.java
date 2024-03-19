@@ -1,4 +1,4 @@
-package xyz.nucleoid.map_templates;
+package net.betrayd.map_templates;
 
 import com.google.common.base.Strings;
 import com.mojang.datafixers.DataFixer;
