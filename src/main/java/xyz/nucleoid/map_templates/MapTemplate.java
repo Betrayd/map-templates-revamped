@@ -17,12 +17,17 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeKeys;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 /**
@@ -36,7 +41,7 @@ public final class MapTemplate {
     private static final BlockState AIR = Blocks.AIR.getDefaultState();
 
     final Long2ObjectMap<MapChunk> chunks = new Long2ObjectOpenHashMap<>();
-    final Long2ObjectMap<NbtCompound> blockEntities = new Long2ObjectOpenHashMap<>();
+    final List<MapEntity> entities = new ArrayList<>();
 
     RegistryKey<Biome> biome = BiomeKeys.THE_VOID;
 
@@ -80,20 +85,35 @@ public final class MapTemplate {
         return this.metadata;
     }
 
-    public void setBlockState(BlockPos pos, BlockState state) {
-        var chunk = this.getOrCreateChunk(chunkPos(pos));
-        chunk.set(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15, state);
+    public void setBlockState(int x, int y, int z, BlockState state) {
+        MapChunk chunk = this.getOrCreateChunk(chunkPos(x, y, z));
+
+        int localX = x & 0xF;
+        int localY = y & 0xF;
+        int localZ = z & 0xF;
+        chunk.set(localX, localY, localZ, state);
 
         this.generatedBounds = null;
 
         if (state.hasBlockEntity()) {
             var nbt = new NbtCompound();
             nbt.putString("id", "DUMMY");
-            nbt.putInt("x", pos.getX());
-            nbt.putInt("y", pos.getY());
-            nbt.putInt("z", pos.getZ());
-            this.blockEntities.put(pos.asLong(), nbt);
+            chunk.putBlockEntity(localX, localY, localZ, nbt);
         }
+    }
+
+    public final void setBlockState(Vec3i pos, BlockState state) {
+        setBlockState(pos.getX(), pos.getY(), pos.getZ(), state);
+    }
+
+    public BlockState getBlockState(int x, int y, int z) {
+        MapChunk chunk = chunks.get(chunkPos(x, y, z));
+        if (chunk == null) return AIR;
+        return chunk.get(x & 0xF, y & 0xF, z & 0xF);
+    }
+
+    public final BlockState getBlockState(Vec3i pos) {
+        return getBlockState(pos.getX(), pos.getY(), pos.getZ());
     }
 
     public void setBlockEntity(BlockPos pos, @Nullable BlockEntity entity) {
@@ -103,61 +123,73 @@ public final class MapTemplate {
             this.setBlockEntityNbt(pos, null);
         }
     }
+    
+    @Nullable
+    public NbtCompound setBlockEntityNbt(int x, int y, int z, @Nullable NbtCompound nbt) {
+        MapChunk chunk = this.getOrCreateChunk(chunkPos(x, y, z));
 
-    public void setBlockEntityNbt(BlockPos pos, @Nullable NbtCompound entityNbt) {
-        if (entityNbt != null) {
-            entityNbt.putInt("x", pos.getX());
-            entityNbt.putInt("y", pos.getY());
-            entityNbt.putInt("z", pos.getZ());
+        int localX = x & 0xF;
+        int localY = y & 0xF;
+        int localZ = z & 0xF;
 
-            this.blockEntities.put(pos.asLong(), entityNbt);
-        } else {
-            this.blockEntities.remove(pos.asLong());
-        }
+        return chunk.putBlockEntity(localX, localY, localZ, nbt);
     }
 
-    public BlockState getBlockState(BlockPos pos) {
-        var chunk = this.chunks.get(chunkPos(pos));
-        if (chunk != null) {
-            return chunk.get(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15);
-        }
-        return AIR;
+    public NbtCompound setBlockEntityNbt(Vec3i pos, @Nullable NbtCompound nbt) {
+        return setBlockEntityNbt(pos.getX(), pos.getY(), pos.getZ(), nbt);
     }
 
     @Nullable
-    public NbtCompound getBlockEntityNbt(BlockPos localPos) {
-        var nbt = this.blockEntities.get(localPos.asLong());
-        return nbt != null ? nbt.copy() : null;
+    public NbtCompound getBlockEntityNbt(int x, int y, int z) {
+        MapChunk chunk = chunks.get(chunkPos(x, y, z));
+        if (chunk == null) return null;
+        return chunk.getBlockEntity(x & 0xF, y & 0xF, z & 0xF);
     }
 
     @Nullable
-    public NbtCompound getBlockEntityNbt(BlockPos localPos, BlockPos worldPos) {
-        var nbt = this.getBlockEntityNbt(localPos);
-        if (nbt != null) {
-            nbt.putInt("x", worldPos.getX());
-            nbt.putInt("y", worldPos.getY());
-            nbt.putInt("z", worldPos.getZ());
-            return nbt;
-        }
-        return null;
+    public final NbtCompound getBlockEntityNbt(Vec3i pos) {
+        return getBlockEntityNbt(pos.getX(), pos.getY(), pos.getZ());
     }
 
     /**
-     * Adds an entity to the map template.
-     * <p>
-     * The position of the entity must be relative to the map template.
-     *
-     * @param entity The entity to add.
-     * @param pos The entity position relatives to the map.
+     * Get all the block entities in this map template.
+     * 
+     * @return An iterable providing block entities with their global block
+     *         positions. This is not based on a real map.
      */
-    public void addEntity(Entity entity, Vec3d pos) {
-        this.getOrCreateChunk(chunkPos(pos)).addEntity(entity, pos);
+    public Iterable<Map.Entry<BlockPos, NbtCompound>> getBlockEntities() {
+        return () -> streamBlockEntities().iterator();
+    }
+
+    /**
+     * Stream all the block entities in this map template.
+     * @return A stream of block entities with their global block positions.
+     */
+    public Stream<Map.Entry<BlockPos, NbtCompound>> streamBlockEntities() {
+        return chunks.long2ObjectEntrySet().stream().flatMap(
+            entry -> streamBlockEntities(entry.getValue())
+        );
+    }
+
+    private Stream<Map.Entry<BlockPos, NbtCompound>> streamBlockEntities(MapChunk chunk) {
+        ChunkSectionPos chunkPos = chunk.getPos();
+        return chunk.streamBlockEntities().map(e -> {
+            int x = e.getKey().getX() + chunkPos.getMinX();
+            int y = e.getKey().getY() + chunkPos.getMinY();
+            int z = e.getKey().getZ() + chunkPos.getMinZ();
+            return new AbstractMap.SimpleEntry<>(new BlockPos(x, y, z), e.getValue());
+        });
     }
 
     public void addEntity(MapEntity entity) {
-        this.getOrCreateChunk(chunkPos(entity.position())).addEntity(entity);
+        entities.add(entity);
     }
 
+    public final void addEntity(Entity entity, Vec3d pos) {
+        MapEntity mapEntity = MapEntity.fromEntity(entity, pos);
+        if (mapEntity != null) addEntity(mapEntity);
+    }
+    
     /**
      * Returns a stream of serialized entities from a chunk.
      *
@@ -167,9 +199,38 @@ public final class MapTemplate {
      * @return The stream of entities.
      */
     public Stream<MapEntity> getEntitiesInChunk(int chunkX, int chunkY, int chunkZ) {
-        var chunk = this.chunks.get(chunkPos(chunkX, chunkY, chunkZ));
-        return chunk != null ? chunk.getEntities().stream() : Stream.empty();
+        ChunkSectionPos chunkPos = ChunkSectionPos.from(chunkX, chunkY, chunkZ);
+        return entities.stream().filter(ent -> MapChunk.isInChunk(ent.position(), chunkPos));
     }
+
+    // /**
+    //  * Adds an entity to the map template.
+    //  * <p>
+    //  * The position of the entity must be relative to the map template.
+    //  *
+    //  * @param entity The entity to add.
+    //  * @param pos The entity position relatives to the map.
+    //  */
+    // public void addEntity(Entity entity, Vec3d pos) {
+    //     this.getOrCreateChunk(chunkPos(pos)).addEntity(entity, pos);
+    // }
+
+    // public void addEntity(MapEntity entity) {
+    //     this.getOrCreateChunk(chunkPos(entity.position())).addEntity(entity);
+    // }
+
+    // /**
+    //  * Returns a stream of serialized entities from a chunk.
+    //  *
+    //  * @param chunkX The chunk X-coordinate.
+    //  * @param chunkY The chunk Y-coordinate.
+    //  * @param chunkZ The chunk Z-coordinate.
+    //  * @return The stream of entities.
+    //  */
+    // public Stream<MapEntity> getEntitiesInChunk(int chunkX, int chunkY, int chunkZ) {
+    //     var chunk = this.chunks.get(chunkPos(chunkX, chunkY, chunkZ));
+    //     return chunk != null ? chunk.getEntities().stream() : Stream.empty();
+    // }
 
     // TODO: store / lookup more efficiently?
     public int getTopY(int x, int z, Heightmap.Type heightmap) {
@@ -203,11 +264,7 @@ public final class MapTemplate {
 
     @NotNull
     public MapChunk getOrCreateChunk(long pos) {
-        var chunk = this.chunks.get(pos);
-        if (chunk == null) {
-            this.chunks.put(pos, chunk = new MapChunk(ChunkSectionPos.from(pos)));
-        }
-        return chunk;
+        return this.chunks.computeIfAbsent(pos, p -> new MapChunk(ChunkSectionPos.from(p)));
     }
 
     @Nullable
@@ -269,7 +326,7 @@ public final class MapTemplate {
         );
     }
 
-    static long chunkPos(BlockPos pos) {
+    static long chunkPos(Vec3i pos) {
         return chunkPos(pos.getX() >> 4, pos.getY() >> 4, pos.getZ() >> 4);
     }
 
@@ -323,18 +380,30 @@ public final class MapTemplate {
                 }
             }
 
-            for (var entity : chunk.getEntities()) {
-                result.addEntity(entity.transformed(transform));
-            }
+            // for ()
+
+            // for (var entity : chunk.getEntities()) {
+            //     result.addEntity(entity.transformed(transform));
+            // }
         }
 
-        for (var blockEntity : Long2ObjectMaps.fastIterable(this.blockEntities)) {
-            mutablePos.set(blockEntity.getLongKey());
+        for (var entry : getBlockEntities()) {
+            mutablePos.set(entry.getKey());
             transform.transformPoint(mutablePos);
-
-            var nbt = blockEntity.getValue().copy();
-            result.setBlockEntityNbt(mutablePos, nbt);
+            result.setBlockEntityNbt(mutablePos, entry.getValue());
         }
+
+        for (MapEntity entity : entities) {
+            result.addEntity(entity.transformed(transform));
+        }
+
+        // for (var blockEntity : Long2ObjectMaps.fastIterable(this.blockEntities)) {
+        //     mutablePos.set(blockEntity.getLongKey());
+        //     transform.transformPoint(mutablePos);
+
+        //     var nbt = blockEntity.getValue().copy();
+        //     result.setBlockEntityNbt(mutablePos, nbt);
+        // }
 
         result.biome = this.biome;
 
@@ -387,9 +456,14 @@ public final class MapTemplate {
                 }
             }
 
-            for (var entity : chunk.getEntities()) {
-                otherChunk.addEntity(entity);
+            for (var entEntry : chunk.getBlockEntities().long2ObjectEntrySet()) {
+                otherChunk.getBlockEntities().put(entEntry.getLongKey(), entEntry.getValue().copy());
             }
+
+        }
+
+        for (MapEntity entity : this.entities) {
+            other.addEntity(entity);
         }
 
         other.metadata.data.copyFrom(this.metadata.data);
