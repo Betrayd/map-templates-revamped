@@ -168,7 +168,9 @@ public final class MapTemplate {
      * Get all the block entities in this map template.
      * 
      * @return An iterable providing block entities with their global block
-     *         positions. This is not based on a real map.
+     *         positions.
+     * @implNote The returned map entries are not based on a real map. This is just
+     *           a convenient Java version of a tuple.
      */
     public Iterable<Map.Entry<BlockPos, NbtCompound>> getBlockEntities() {
         return () -> streamBlockEntities().iterator();
@@ -219,35 +221,6 @@ public final class MapTemplate {
         ChunkSectionPos chunkPos = ChunkSectionPos.from(chunkX, chunkY, chunkZ);
         return entities.stream().filter(ent -> MapChunk.isInChunk(ent.position(), chunkPos));
     }
-
-    // /**
-    //  * Adds an entity to the map template.
-    //  * <p>
-    //  * The position of the entity must be relative to the map template.
-    //  *
-    //  * @param entity The entity to add.
-    //  * @param pos The entity position relatives to the map.
-    //  */
-    // public void addEntity(Entity entity, Vec3d pos) {
-    //     this.getOrCreateChunk(chunkPos(pos)).addEntity(entity, pos);
-    // }
-
-    // public void addEntity(MapEntity entity) {
-    //     this.getOrCreateChunk(chunkPos(entity.position())).addEntity(entity);
-    // }
-
-    // /**
-    //  * Returns a stream of serialized entities from a chunk.
-    //  *
-    //  * @param chunkX The chunk X-coordinate.
-    //  * @param chunkY The chunk Y-coordinate.
-    //  * @param chunkZ The chunk Z-coordinate.
-    //  * @return The stream of entities.
-    //  */
-    // public Stream<MapEntity> getEntitiesInChunk(int chunkX, int chunkY, int chunkZ) {
-    //     var chunk = this.chunks.get(chunkPos(chunkX, chunkY, chunkZ));
-    //     return chunk != null ? chunk.getEntities().stream() : Stream.empty();
-    // }
 
     // TODO: store / lookup more efficiently?
     public int getTopY(int x, int z, Heightmap.Type heightmap) {
