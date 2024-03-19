@@ -3,6 +3,7 @@ package xyz.nucleoid.map_templates;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.block.BlockState;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -37,7 +38,7 @@ public record MapTemplatePlacer(MapTemplate template) {
         var template = this.template;
         var bounds = template.getBounds();
 
-        var worldPos = new BlockPos.Mutable();
+        BlockPos.Mutable worldPos = new BlockPos.Mutable();
 
         int originX = origin.getX();
         int originY = origin.getY();
@@ -57,7 +58,7 @@ public record MapTemplatePlacer(MapTemplate template) {
             long chunkPos = ChunkPos.toLong(chunkX, chunkZ);
             var chunk = chunkCache.get(chunkPos);
 
-            var blockEntity = template.getBlockEntityNbt(templatePos, worldPos);
+            NbtCompound blockEntity = template.getBlockEntityNbt(templatePos, worldPos);
             if (blockEntity != null) {
                 chunk.addPendingBlockEntityNbt(blockEntity);
             }

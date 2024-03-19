@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -41,7 +41,7 @@ public final class MapTemplate {
     private static final BlockState AIR = Blocks.AIR.getDefaultState();
 
     final Long2ObjectMap<MapChunk> chunks = new Long2ObjectOpenHashMap<>();
-    final List<MapEntity> entities = new ArrayList<>();
+    final Collection<MapEntity> entities = new ArrayList<>();
 
     RegistryKey<Biome> biome = BiomeKeys.THE_VOID;
 
@@ -56,6 +56,7 @@ public final class MapTemplate {
     public static MapTemplate createEmpty() {
         return new MapTemplate();
     }
+    
 
     /**
      * Sets the biome key of the map template.
@@ -151,6 +152,18 @@ public final class MapTemplate {
         return getBlockEntityNbt(pos.getX(), pos.getY(), pos.getZ());
     }
 
+    public NbtCompound getBlockEntityNbt(BlockPos localPos, BlockPos worldPos) {
+        NbtCompound nbt = getBlockEntityNbt(localPos);
+        if (nbt == null) return null;
+
+        nbt = nbt.copy(); // Don't fuck up the original nbt
+        nbt.putInt("x", worldPos.getX());
+        nbt.putInt("y", worldPos.getY());
+        nbt.putInt("z", worldPos.getZ());
+        
+        return nbt;
+    }
+
     /**
      * Get all the block entities in this map template.
      * 
@@ -188,6 +201,10 @@ public final class MapTemplate {
     public final void addEntity(Entity entity, Vec3d pos) {
         MapEntity mapEntity = MapEntity.fromEntity(entity, pos);
         if (mapEntity != null) addEntity(mapEntity);
+    }
+
+    public Collection<MapEntity> getEntities() {
+        return entities;
     }
     
     /**

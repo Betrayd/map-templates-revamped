@@ -19,7 +19,6 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -129,22 +128,12 @@ public final class MapTemplateSerializer {
             metadata.regions.add(TemplateRegion.deserialize(regionRoot));
         }
 
-        var blockEntityList = root.getList("block_entities", NbtElement.COMPOUND_TYPE);
-        for (int i = 0; i < blockEntityList.size(); i++) {
-            var blockEntity = blockEntityList.getCompound(i);
-
-            if (targetVersion > oldVersion && !SKIP_FIXERS) {
-                // Apply data fixer to block entity
-                Dynamic<NbtElement> dynamic = new Dynamic<>(NbtOps.INSTANCE, blockEntity);
-                blockEntity = (NbtCompound) fixer.update(TypeReferences.BLOCK_ENTITY, dynamic, oldVersion, targetVersion).getValue();
+        NbtList entityList = root.getList("entities", NbtElement.COMPOUND_TYPE);
+        if (entityList != null) {
+            for (int i = 0; i < entityList.size(); i++) {
+                MapEntity mapEntity = MapEntity.fromNbt(root);
+                template.entities.add(mapEntity);
             }
-
-            var pos = new BlockPos(
-                    blockEntity.getInt("x"),
-                    blockEntity.getInt("y"),
-                    blockEntity.getInt("z")
-            );
-            template.blockEntities.put(pos.asLong(), blockEntity);
         }
 
         template.bounds = BlockBounds.deserialize(root.getCompound("bounds"));
@@ -189,9 +178,15 @@ public final class MapTemplateSerializer {
 
         root.put("chunks", chunkList);
 
-        var blockEntityList = new NbtList();
-        blockEntityList.addAll(template.blockEntities.values());
-        root.put("block_entities", blockEntityList);
+        NbtList entityList = new NbtList();
+        for (MapEntity entity : template.entities) {
+            entityList.add(entity.nbt());
+        }
+        root.put("entities", entityList);
+
+        // var blockEntityList = new NbtList();
+        // blockEntityList.addAll(template.streamBlockEntities().toList());
+        // root.put("block_entities", blockEntityList);
 
         root.put("bounds", template.bounds.serialize(new NbtCompound()));
 

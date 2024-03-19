@@ -24,6 +24,7 @@ public record MapEntity(Vec3d position, NbtCompound nbt) {
         var worldPosition = this.position.add(origin.getX(), origin.getY(), origin.getZ());
         nbt.put("Pos", posToList(worldPosition));
 
+        // AbstractDecorationEntity has special position handling with an attachment position.
         if (nbt.contains("TileX", NbtElement.INT_TYPE)) {
             nbt.putInt("TileX", MathHelper.floor(nbt.getInt("TileX") + worldPosition.x - chunkLocalPos.x));
             nbt.putInt("TileY", MathHelper.floor(nbt.getInt("TileY") + worldPosition.y - chunkLocalPos.y));
@@ -68,11 +69,17 @@ public record MapEntity(Vec3d position, NbtCompound nbt) {
         return new MapEntity(position, nbt);
     }
 
+    @Deprecated
     public static MapEntity fromNbt(ChunkSectionPos sectionPos, NbtCompound nbt) {
         Vec3d localPos = listToPos(nbt.getList("Pos", NbtElement.DOUBLE_TYPE));
         Vec3d globalPos = localPos.add(sectionPos.getMinX(), sectionPos.getMinY(), sectionPos.getMinZ());
 
         return new MapEntity(globalPos, nbt);
+    }
+
+    public static MapEntity fromNbt(NbtCompound nbt) {
+        Vec3d pos = listToPos(nbt.getList("Pos", NbtElement.DOUBLE_TYPE));
+        return new MapEntity(pos, nbt);
     }
 
     MapEntity transformed(MapTransform transform) {
