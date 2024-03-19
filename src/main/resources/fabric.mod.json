@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "id": "map_templates",
+  "id": "map-templates-revamped",
   "version": "${version}",
-  "name": "Map Templates",
+  "name": "Map Templates Revamped",
   "description": "Library to work with map templates that can be saved and loaded into a world",
-  "authors": ["Nucleoid Contributors"],
+  "authors": ["Nucleoid Contributors", "Igrium"],
   "license": "LGPLv3",
   "environment": "*",
   "entrypoints": {
@@ -20,5 +20,8 @@
   "depends": {
     "minecraft": ">=1.20.3-alpha.23.42.a",
     "java": ">=17"
+  },
+  "breaks": {
+    "map_templates": "*"
   }
 }
