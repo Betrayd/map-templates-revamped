@@ -24,6 +24,7 @@ import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.PalettedContainer;
 
 public final class MapChunk {
@@ -194,6 +195,11 @@ public final class MapChunk {
         if (y < 0 || y >= 16) throw new IndexOutOfBoundsException(y);
         if (z < 0 || z >= 16) throw new IndexOutOfBoundsException(z);
 
+        nbt = nbt.copy();
+        nbt.putInt("x", pos.getX());
+        nbt.putInt("y", pos.getY());
+        nbt.putInt("z", pos.getZ());
+
         return blockEntities.put(BlockPos.asLong(x, y, z), nbt);
     }
 
@@ -246,6 +252,19 @@ public final class MapChunk {
                 chunk.putBlockEntity(x, y, z, nbt);
             }
         }
+
+        return chunk;
+    }
+
+    /**
+     * Load a map chunk from the blocks in a ChunkSection.
+     * @param pos Coordinates of chunk.
+     * @param section Chunk section to load from.
+     * @return Loaded map chunk.
+     */
+    public static MapChunk loadFrom(ChunkSectionPos pos, ChunkSection section) {
+        MapChunk chunk = new MapChunk(pos);
+        chunk.container = section.getBlockStateContainer().copy();
 
         return chunk;
     }

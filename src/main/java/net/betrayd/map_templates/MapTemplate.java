@@ -21,6 +21,7 @@ import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeKeys;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -256,6 +257,15 @@ public final class MapTemplate {
     public MapChunk getOrCreateChunk(long pos) {
         return this.chunks.computeIfAbsent(pos, p -> new MapChunk(ChunkSectionPos.from(p)));
     }
+
+    protected MapChunk putChunk(long pos, MapChunk chunk) {
+        return this.chunks.put(pos, chunk);
+    }
+
+    protected final MapChunk putChunk(MapChunk chunk) {
+        return putChunk(chunk.getPos().asLong(), chunk);
+    }
+    
 
     @Nullable
     public MapChunk getChunk(long pos) {
