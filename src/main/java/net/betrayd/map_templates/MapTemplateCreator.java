@@ -73,13 +73,16 @@ public class MapTemplateCreator {
         ChunkSectionPos minPos = min(bounds1, bounds2);
         ChunkSectionPos maxPos = max(bounds1, bounds2);
 
+        BlockPos minBlockPos = new BlockPos(minPos.getMinX(), minPos.getMinY(), minPos.getMinZ());
+        BlockPos maxBlockPos = new BlockPos(maxPos.getMaxX(), maxPos.getMaxY(), maxPos.getMaxZ());
+
         MapTemplate template = MapTemplate.createEmpty();
 
         if (entityPredicate != null && world instanceof ServerWorld serverWorld) {
             entityPredicate = entityPredicate.and(ent -> !(ent instanceof PlayerEntity));
 
             for (Entity ent : serverWorld.iterateEntities()) {
-                if (entityPredicate.test(ent)) {
+                if (entityPredicate.test(ent) && blockBoundsContains(minBlockPos, maxBlockPos, ent.getBlockPos())) {
                     template.addEntity(ent, ent.getPos());
                 }
             }
@@ -94,10 +97,11 @@ public class MapTemplateCreator {
                 if (chunk == null) continue;
 
                 ChunkPos chunkPos = new ChunkPos(x, z);
-                futures.add(CompletableFuture.supplyAsync(() -> compileChunk(chunk, chunkPos), executor).thenAccept(array -> {
+                futures.add(CompletableFuture.supplyAsync(() -> compileChunk(chunk, chunkPos, minPos.getY(), maxPos.getY()), executor).thenAccept(array -> {
                     
                     for (MapChunk c : array) {
-                        putChunkInTemplate(template, c);
+                        if (c != null)
+                            putChunkInTemplate(template, c);
                     }
                 }));
             }
@@ -120,14 +124,15 @@ public class MapTemplateCreator {
      * @return Compiled map chunks. Unlike Minecraft chunks, map chunks are cubic,
      *         meaning that a single Minecraft chunk will have multiple map chunks.
      */
-    public static MapChunk[] compileChunk(Chunk chunk, ChunkPos chunkPos) {
+    public static MapChunk[] compileChunk(Chunk chunk, ChunkPos chunkPos, int minY, int maxY) {
         ChunkSection[] sections = chunk.getSectionArray();
         MapChunk[] chunks = new MapChunk[sections.length];
         LOGGER.info("Writing chunk {}", chunkPos);
         int y;
         for (int i = 0; i < sections.length; i++) {
             y = chunk.sectionIndexToCoord(i);
-            chunks[i] = MapChunk.loadFrom(ChunkSectionPos.from(chunkPos, y), sections[i]);
+            if (minY <= y && y <= maxY)
+                chunks[i] = MapChunk.loadFrom(ChunkSectionPos.from(chunkPos, y), sections[i]);
         }
 
         for (BlockPos pos : chunk.getBlockEntityPositions()) {
@@ -135,6 +140,7 @@ public class MapTemplateCreator {
             if (nbt == null) continue;
 
             MapChunk mapChunk = chunks[chunk.getSectionIndex(pos.getY())];
+            if (mapChunk == null) continue;
 
             int chunkX = pos.getX() & 0xF;
             int chunkY = pos.getY() & 0xF;
@@ -158,5 +164,11 @@ public class MapTemplateCreator {
                 Math.max(a.getX(), b.getX()),
                 Math.max(a.getY(), b.getY()),
                 Math.max(a.getZ(), b.getZ()));
+    }
+
+    private static boolean blockBoundsContains(BlockPos minPos, BlockPos maxPos, BlockPos pos) {
+        return minPos.getX() <= pos.getX() && pos.getX() <= maxPos.getX()
+            && minPos.getY() <= pos.getY() && pos.getY() <= maxPos.getY()
+            && minPos.getZ() <= pos.getZ() && pos.getZ() <= maxPos.getZ();
     }
 }

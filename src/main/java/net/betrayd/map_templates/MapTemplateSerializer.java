@@ -136,7 +136,7 @@ public final class MapTemplateSerializer {
             }
         }
 
-        template.bounds = BlockBounds.deserialize(root.getCompound("bounds"));
+        // template.bounds = BlockBounds.deserialize(root.getCompound("bounds"));
         metadata.data = root.getCompound("data");
 
         var biomeId = root.getString("biome");
@@ -188,7 +188,7 @@ public final class MapTemplateSerializer {
         // blockEntityList.addAll(template.streamBlockEntities().toList());
         // root.put("block_entities", blockEntityList);
 
-        root.put("bounds", template.bounds.serialize(new NbtCompound()));
+        // root.put("bounds", template.bounds.serialize(new NbtCompound()));
 
         if (template.biome != null) {
             root.putString("biome", template.biome.getValue().toString());
